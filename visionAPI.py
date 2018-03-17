@@ -17,5 +17,3 @@ blob = bucket.blob(os.path.basename(source_file_name))
 blob.upload_from_filename(source_file_name)
 
 print('File {} uploaded to {}.'.format(source_file_name, bucket))
-
-

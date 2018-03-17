@@ -47,7 +47,6 @@ def detect_text(path):
     """
         vertices = (['({},{})'.format(vertex.x, vertex.y)
                     for vertex in text.bounding_poly.vertices])
-
         print('bounds: {}'.format(','.join(vertices)))
     """
 
