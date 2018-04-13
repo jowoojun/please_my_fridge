@@ -17,8 +17,43 @@ class MyPrettyPrinter(pprint.PrettyPrinter):
 client = MongoClient('localhost', 27017)
 
 db = client['recipe_default_info']
-recipe = db.full_format_recipes
+recipes = db.full_format_recipes
 
+count = 0
+for i, recipe in enumerate(recipes.find()):
+    #j = i + 1
+    #if "title" in recipe:
+    #    print(j ,"st, title : " ,MyPrettyPrinter().pprint(recipe['title']))
+    #title = recipe["title"].replace('"', '').replace('\n','').replace(',','').encode("utf-8")
+    #recipe.update({"title": title}, upsert=False)
+    #recipes.save(recipe)
+
+    #title = recipe["title"]
+    #if "_id" in recipe:
+    #    title = '"' + title + '"'
+    #    print(title)
+    #    recipe.update({"title": title[1:]}, upsert=False)
+    #    #recipes.save(recipe)
+    #if " " in title[-1]:
+    #    title = '"' + title + '"'
+    #    print(title)
+        #recipe.update({"title": title}, upsert=False)
+        #recipes.save(recipe)
+    
+    recipe.update({"url": ""})
+    recipes.save(recipe)
+
+
+
+
+
+    #print "googleimagesdownload -k \"", recipe["title"].encode("utf-8"),"\" -l 1"
+    #ap = "googleimagesdownload -k " + '"' + recipe["title"].encode("utf-8") + '"' + " -l 1"
+    #print(ap)
+
+
+
+#print(count)
 
 def translate_text(target, text):
     """Translates text into the target language.
@@ -62,5 +97,5 @@ def translate_text(target, text):
 
     return new_dict
 
-new_dic = translate_text('ko', recipe.find_one())
-MyPrettyPrinter().pprint(new_dic)
+#new_dic = translate_text('ko', recipe.find_one())
+#MyPrettyPrinter().pprint(new_dic)
