@@ -4,6 +4,7 @@ import argparse
 
 from google.cloud import translate
 import six
+import os
 
 import pprint
 class MyPrettyPrinter(pprint.PrettyPrinter):
@@ -14,12 +15,15 @@ class MyPrettyPrinter(pprint.PrettyPrinter):
             _object = unicode(_object,'utf8')
             return "'%s'" % _object.encode('utf8'), True, False
         return pprint.PrettyPrinter.format(self, _object, context, maxlevels, level)
-client = MongoClient('localhost', 27017)
+print("connecting DB")
+client = MongoClient('ds119049.mlab.com', 19049)
 
-db = client['recipe_default_info']
-recipes = db.full_format_recipes
+print("connecting collections")
+db = client['please_my_fridge']
+db.authenticate(os.environ["mongoID"], os.environ["mongoPW"])
+recipes = db.full_recipes
 
-count = 0
+print("Starting Data Process")
 for i, recipe in enumerate(recipes.find()):
     #j = i + 1
     #if "title" in recipe:
@@ -34,14 +38,15 @@ for i, recipe in enumerate(recipes.find()):
     #    print(title)
     #    recipe.update({"title": title[1:]}, upsert=False)
     #    #recipes.save(recipe)
-    #if " " in title[-1]:
-    #    title = '"' + title + '"'
-    #    print(title)
-        #recipe.update({"title": title}, upsert=False)
-        #recipes.save(recipe)
+    title = recipe["title"]
+    if " " == title[-1]:
+        print(title)
+        title = title[:-1]
+        recipe.update({"title": title}, upsert=False)
+        recipes.save(recipe)
     
-    recipe.update({"url": ""})
-    recipes.save(recipe)
+    #recipe.update({"url": ""})
+    #recipes.save(recipe)
 
 
 
