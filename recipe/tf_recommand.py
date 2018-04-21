@@ -16,6 +16,7 @@ users = db.full_user_data
 #recipes = db.fake_recipe_data
 #users = db.fake_user_data
 
+# data preprocessing
 print("Starting Data Process")
 recipe_title = []
 recipe_categories = []
@@ -33,6 +34,8 @@ for i, user in enumerate(users.find()):
     user_nick_name.append(user["nickname"])
     user_tried.append(user["scrap"])
 
+
+# encode recipe and users_nickname
 from sklearn import preprocessing
 recipe_label_encoder = preprocessing.LabelEncoder()
 recipe_label_encoder.fit(recipe_title)
@@ -44,6 +47,8 @@ nickname_label_encoder.fit(user_nick_name)
 encoded_user_nick_name = np.array(nickname_label_encoder.transform(user_nick_name), dtype=np.int32)
 total_user_depth = encoded_user_nick_name.max() + 1
 
+
+# make user-recipe-matrix
 def read_rating_data():
     Q = np.zeros((total_user_depth, total_recipe_depth), dtype=np.float64)
 
@@ -57,51 +62,51 @@ def read_rating_data():
 
 R = read_rating_data()
 
+
 # Convert DataFrame in user-item matrix
 matrix = pd.DataFrame(R, columns=[i for i in range(total_recipe_depth)], index=[j for j in range(total_user_depth)])
 
 users = matrix.index.tolist()
-items = matrix.columns.tolist()
-
+recipes = matrix.columns.tolist()
 matrix = matrix.as_matrix()
 
-num_input = total_recipe_depth
-num_hidden_1 = 10
-num_hidden_2 = 5
 
-X = tf.placeholder(tf.float64, [None, num_input])
+# tensorflow declare
+input_size = total_recipe_depth
+hidden_layer_size_1 = 10
+hidden_layer_size_2 = 5
+
+X = tf.placeholder(tf.float64, [None, input_size])
 
 weights = {
-    'encoder_h1': tf.Variable(tf.random_normal([num_input, num_hidden_1], dtype=tf.float64)),
-    'encoder_h2': tf.Variable(tf.random_normal([num_hidden_1, num_hidden_2], dtype=tf.float64)),
-    'decoder_h1': tf.Variable(tf.random_normal([num_hidden_2, num_hidden_1], dtype=tf.float64)),
-    'decoder_h2': tf.Variable(tf.random_normal([num_hidden_1, num_input], dtype=tf.float64)),
+    'encoder_w1': tf.Variable(tf.random_normal([input_size, hidden_layer_size_1], dtype=tf.float64)),
+    'encoder_w2': tf.Variable(tf.random_normal([hidden_layer_size_1, hidden_layer_size_2], dtype=tf.float64)),
+    'decoder_w1': tf.Variable(tf.random_normal([hidden_layer_size_2, hidden_layer_size_1], dtype=tf.float64)),
+    'decoder_w2': tf.Variable(tf.random_normal([hidden_layer_size_1, input_size], dtype=tf.float64)),
 }
 
 biases = {
-    'encoder_b1': tf.Variable(tf.random_normal([num_hidden_1], dtype=tf.float64)),
-    'encoder_b2': tf.Variable(tf.random_normal([num_hidden_2], dtype=tf.float64)),
-    'decoder_b1': tf.Variable(tf.random_normal([num_hidden_1], dtype=tf.float64)),
-    'decoder_b2': tf.Variable(tf.random_normal([num_input], dtype=tf.float64)),
+    'encoder_b1': tf.Variable(tf.random_normal([hidden_layer_size_1], dtype=tf.float64)),
+    'encoder_b2': tf.Variable(tf.random_normal([hidden_layer_size_2], dtype=tf.float64)),
+    'decoder_b1': tf.Variable(tf.random_normal([hidden_layer_size_1], dtype=tf.float64)),
+    'decoder_b2': tf.Variable(tf.random_normal([input_size], dtype=tf.float64)),
 }
 
 # Building the encoder
-
 def encoder(x):
     # Encoder Hidden layer with sigmoid activation #1
-    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['encoder_h1']), biases['encoder_b1']))
+    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['encoder_w1']), biases['encoder_b1']))
     # Encoder Hidden layer with sigmoid activation #2
-    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['encoder_h2']), biases['encoder_b2']))
+    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['encoder_w2']), biases['encoder_b2']))
     return layer_2
 
 
 # Building the decoder
-
 def decoder(x):
     # Decoder Hidden layer with sigmoid activation #1
-    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_h1']), biases['decoder_b1']))
+    layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weights['decoder_w1']), biases['decoder_b1']))
     # Decoder Hidden layer with sigmoid activation #2
-    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_h2']), biases['decoder_b2']))
+    layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weights['decoder_w2']), biases['decoder_b2']))
     return layer_2
 
 
@@ -116,15 +121,14 @@ y_pred = decoder_op
 y_true = X
 
 # Define loss and optimizer, minimize the squared error
-
 loss = tf.losses.mean_squared_error(y_true, y_pred)
-optimizer = tf.train.RMSPropOptimizer(0.03).minimize(loss)
+optimizer = tf.train.RMSPropOptimizer(0.01).minimize(loss)
 
 predictions = pd.DataFrame()
 
 # Define evaluation metrics
-eval_x = tf.placeholder(tf.int32, )
-eval_y = tf.placeholder(tf.int32, )
+eval_x = tf.placeholder(tf.int32)
+eval_y = tf.placeholder(tf.int32)
 pre, pre_op = tf.metrics.precision(labels=eval_x, predictions=eval_y)
 
 # Initialize the variables (i.e. assign their default value)
@@ -134,14 +138,13 @@ local_init = tf.local_variables_initializer()
 # Session
 with tf.Session() as session:
     epochs = 100
-    batch_size = 250
+    batch_size = 2
 
     session.run(init)
     session.run(local_init)
 
     num_batches = int(matrix.shape[0] / batch_size)
     matrix = np.array_split(matrix, num_batches)
-    print(matrix)
 
     for i in range(epochs):
 
@@ -158,26 +161,24 @@ with tf.Session() as session:
     print("Predictions...")
 
     matrix = np.concatenate(matrix, axis=0)
-
     preds = session.run(decoder_op, feed_dict={X: matrix})
-
     predictions = predictions.append(pd.DataFrame(preds))
 
     predictions = predictions.stack().reset_index(name='rating')
     predictions.columns = ['users', 'recipe', 'rating']
     predictions['users'] = predictions['users'].map(lambda value: users[value])
-    predictions['recipe'] = predictions['recipe'].map(lambda value: items[value])
+    predictions['recipe'] = predictions['recipe'].map(lambda value: recipes[value])
 
-    print("Filtering out items in training set")
-
+    print("Filtering out recipes in training set")
     keys = ['users', 'recipe']
-    i1 = predictions.set_index(keys).index
 
     df = pd.DataFrame(R, columns=[i for i in range(total_recipe_depth)], index=[j for j in range(total_user_depth)])
     df = df.stack().reset_index(name='rating')
     df.columns = ['users', 'recipe', 'rating']
     df['users'] = df['users'].map(lambda value: users[value])
-    df['recipe'] = df['recipe'].map(lambda value: items[value])
+    df['recipe'] = df['recipe'].map(lambda value: recipes[value])
+
+    i1 = predictions.set_index(keys).index
     i2 = df.set_index(keys).index
 
     """
