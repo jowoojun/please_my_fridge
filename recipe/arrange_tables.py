@@ -45,13 +45,3 @@ for i, recipe in enumerate(recipes.find()):
 
 
 
-    #print "googleimagesdownload -k \"", recipe["title"].encode("utf-8"),"\" -l 1"
-    #ap = "googleimagesdownload -k " + '"' + recipe["title"].encode("utf-8") + '"' + " -l 1"
-    #print(ap)
-
-new_dic = translate_text('ko', recipes.find_one())
-print(new_dic.encode("utf-8"))
-
-#print(count)
-
-
